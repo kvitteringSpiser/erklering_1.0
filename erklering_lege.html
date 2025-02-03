@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+            font-size: 12pt;
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-reset {
+            background: #f0f0f0;
+        }
+
+        .btn-export {
+            background: #007bff;
+            color: white;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            right: 0;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+
+        .document-container {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .document {
+            padding: 40px;
+            background: white;
+        }
+
+        /* Legekontor informasjon øverst */
+        .clinic-info {
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        /* Pasient informasjon */
+        .patient-info {
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        /* Fødselsdato */
+        .birthdate {
+            margin-top: 15px;
+            margin-bottom: 30px;
+        }
+
+        /* Dato høyre side */
+        .date {
+            text-align: right;
+            margin-bottom: 30px;
+        }
+
+        /* Tittel på erklæring */
+        .certificate-title {
+            margin-bottom: 20px;
+            font-weight: normal;
+        }
+
+        /* Hovedinnhold */
+        .content {
+            margin-bottom: 40px;
+            line-height: 1.5;
+        }
+
+        /* Signatur seksjon */
+        .signature {
+            margin-top: 60px;
+            line-height: 1.5;
+        }
+
+        [contenteditable="true"]:hover {
+            background: #f8f9fa;
+            outline: 1px dashed #ccc;
+            padding: 2px;
+        }
+        
+        [contenteditable="true"]:focus {
+            background: #fff;
+            outline: 2px solid #007bff;
+            padding: 2px;
+        }
+
+        @media print {
+            .controls {
+                display: none;
+            }
+            body {
+                background: white;
+            }
+            .document-container {
+                box-shadow: none;
+                margin: 0;
+            }
+            [contenteditable="true"]:hover {
+                background: none;
+                outline: none;
+                padding: 0;
+            }
+            [contenteditable="true"]:focus {
+                background: none;
+                outline: none;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button class="btn btn-reset" onclick="resetFields()">Nullstill</button>
+        <div class="dropdown">
+            <button class="btn btn-export">Eksporter</button>
+            <div class="dropdown-content">
+                <a href="#" onclick="exportPDF()">Som PDF</a>
+                <a href="#" onclick="exportPNG()">Som PNG</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="document-container">
+        <div class="document">
+            <!-- Legekontor informasjon -->
+            <div class="clinic-info">
+                <div contenteditable="true" id="klinikkNavn">Mariadasans Legekontor</div>
+                <div contenteditable="true" id="klinikkAdresse">Skolegata 14</div>
+                <div contenteditable="true" id="klinikkPoststed">2010 STRØMMEN</div>
+            </div>
+
+            <!-- Pasient informasjon -->
+            <div class="patient-info">
+                <div contenteditable="true" id="pasientNavn">[Pasient navn]</div>
+                <div contenteditable="true" id="pasientAdresse">[Gateadresse]</div>
+                <div contenteditable="true" id="pasientPoststed">2013 SKJETTEN</div>
+            </div>
+
+            <!-- Fødselsdato -->
+            <div class="birthdate">
+                <div contenteditable="true" id="fodselsdato">Født: [DD.MM.2007]</div>
+            </div>
+
+            <!-- Dato høyre side -->
+            <div class="date">
+                <div contenteditable="true" id="dato">STRØMMEN, [DD.MM.2025]</div>
+            </div>
+
+            <!-- Tittel på erklæring -->
+            <div class="certificate-title">
+                <div contenteditable="true" id="attentTitle" style="font-weight: bold;">Attest til skole</div>
+            </div>
+
+            <!-- Hovedinnhold -->
+            <div class="content">
+                <div contenteditable="true" id="mainContent">Det bekreftes med dette at pasienten har vært til konsultasjon. Grunnet sykdom kan ikke vedkommende delta på skoleaktiviteter fra [dato] til [dato].</div>
+            </div>
+
+            <!-- Signatur -->
+            <div class="signature">
+                <div contenteditable="true" id="hilsen">Vennlig hilsen</div>
+                <div contenteditable="true" id="legeNavn">Yvonne Mariadasan</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const defaultValues = {
+            klinikkNavn: 'Mariadasans Legekontor',
+            klinikkAdresse: 'Skolegata 14',
+            klinikkPoststed: '2010 STRØMMEN',
+            pasientNavn: '[Pasient navn]',
+            pasientAdresse: '[Gateadresse]',
+            pasientPoststed: '[Postnummer og sted]',
+            fodselsdato: 'Født: [DD.MM.ÅÅÅÅ]',
+            dato: '[Sted], [DD.MM.ÅÅÅÅ]',
+            attentTitle: 'Attest til skoleåret 2024/2025',
+            mainContent: 'Det bekreftes med dette at pasienten har vært til konsultasjon. Grunnet sykdom kan ikke vedkommende delta på skoleaktiviteter fra [dato] til [dato].',
+            hilsen: 'Vennlig hilsen',
+            legeNavn: '[Lege navn]',
+            legeTittel: 'Lege'
+        };
+
+        function resetFields() {
+            if (confirm('Er du sikker på at du vil nullstille alle felt?')) {
+                for (const [id, value] of Object.entries(defaultValues)) {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.textContent = value;
+                    }
+                }
+            }
+        }
+
+        function exportPDF() {
+            window.print();
+        }
+
+        async function exportPNG() {
+            const element = document.querySelector('.document-container');
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                windowWidth: element.scrollWidth,
+                windowHeight: element.scrollHeight,
+                backgroundColor: '#ffffff'
+            });
+            
+            const link = document.createElement('a');
+            link.download = 'legeerklaring.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html>
